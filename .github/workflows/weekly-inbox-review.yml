@@ -1,0 +1,53 @@
+name: Weekly inbox review
+
+# 毎週月曜 9:00 (JST) に、未整理の inbox をまとめた Issue を作る。
+# 前週の整理 Issue は閉じ、未整理が0件なら何もしない。
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 整理用 Issue を作成
+        run: |
+          set -euo pipefail
+          issues=$(gh issue list --label inbox --state open --limit 200 --json number,title \
+            --jq '.[] | "- [ ] #\(.number) \(.title)"')
+          issue_count=$(printf '%s' "$issues" | grep -c . || true)
+          file_count=$(grep -c '^- \[' bookmarks/inbox.md || true)
+
+          for n in $(gh issue list --label weekly-review --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --reason "not planned" --comment "次週の整理 Issue に引き継ぎました。"
+          done
+
+          if [ "$issue_count" -eq 0 ] && [ "$file_count" -eq 0 ]; then
+            echo "未整理の inbox はありません。"
+            exit 0
+          fi
+
+          {
+            echo "未整理: Issue ${issue_count} 件 / inbox.md ${file_count} 件"
+            echo
+            echo "## Issue"
+            echo "カテゴリラベル（frontend / backend / infra / ai）を付けると自動でファイルへ追記されます。不要なものは Close as not planned で閉じてください。"
+            echo
+            echo "${issues:-なし}"
+            echo
+            echo "## bookmarks/inbox.md"
+            echo "該当するカテゴリファイルへ移し、inbox.md からは削除してください。"
+          } > body.md
+
+          gh issue create --title "週次inbox整理 $(TZ=Asia/Tokyo date +%F)" --label weekly-review --body-file body.md
