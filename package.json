@@ -1,0 +1,15 @@
+{
+  "name": "tech-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint:text": "textlint \"articles/**/*.md\" \"templates/*.md\" \"docs/**/*.md\" README.md",
+    "lint:text:fix": "textlint --fix \"articles/**/*.md\" \"templates/*.md\" \"docs/**/*.md\" README.md",
+    "test": "node --test \"scripts/**/*.test.mjs\""
+  },
+  "devDependencies": {
+    "textlint": "^15.8.0",
+    "textlint-filter-rule-comments": "^1.3.0",
+    "textlint-rule-preset-ja-technical-writing": "^12.0.2"
+  }
+}
