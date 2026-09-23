@@ -23,6 +23,7 @@ describe("parseIssue", () => {
       title: "Docker Compose Tips",
       comment: "watch が便利",
       tags: ["docker", "compose"],
+      savedDate: null,
     });
   });
 
@@ -71,6 +72,12 @@ describe("parseIssue", () => {
     const result = parseIssue({ title: "t", body: "# 見出し\nhttps://example.com/p#section" });
     assert.deepEqual(result.tags, []);
     assert.equal(result.url, "https://example.com/p#section");
+  });
+
+  it("保存日の行があれば取り出し、コメントとして扱わない", () => {
+    const result = parseIssue({ title: "t", body: "URL: https://e.com\n保存日: 2026-09-01" });
+    assert.equal(result.savedDate, "2026-09-01");
+    assert.equal(result.comment, "");
   });
 
   it("URL が無ければ null を返す", () => {
@@ -179,6 +186,17 @@ describe("run", () => {
       fetchTitle: async () => "取得したタイトル",
     });
     assert.match(await readFile(join(dir, "infra.md"), "utf8"), /\[取得したタイトル\]\(https:\/\/e\.com\/x\)/);
+  });
+
+  it("本文に保存日があれば Issue の作成日より優先する", async () => {
+    const dir = await setup();
+    await run({
+      event: event("t", "URL: https://e.com\n保存日: 2026-09-01"),
+      labelName: "infra",
+      bookmarksDir: dir,
+      fetchTitle: noFetch,
+    });
+    assert.match(await readFile(join(dir, "infra.md"), "utf8"), / - 2026-09-01\n/);
   });
 
   it("同じ URL が登録済みなら追記しない", async () => {
