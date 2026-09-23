@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import { readFile, appendFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { fetchPageTitle, titleFromUrl } from "./bookmark-from-issue.mjs";
+import { categoriesFromTags, fetchPageTitle, parseIssue, titleFromUrl } from "./bookmark-from-issue.mjs";
 
 export const INBOX_PATH = "bookmarks/inbox.md";
 
@@ -50,7 +50,7 @@ export function removeEntries(lines, entries) {
 }
 
 // Issue タイトルのリンクはクリックできないため、URL は本文に置き、タイトルにはページタイトルを使う。
-// Actions が作る Issue は normalize-issue.mjs を起動しないので、ここでタイトルを取得する
+// Actions が作る Issue は normalize-issue.mjs を起動しないので、タイトルの取得とカテゴリ名タグからの候補ラベルもここで行う
 export async function buildIssue(entry, { fetchTitle = fetchPageTitle } = {}) {
   const body = [
     `URL: ${entry.url}`,
@@ -60,17 +60,18 @@ export async function buildIssue(entry, { fetchTitle = fetchPageTitle } = {}) {
     `<!-- ${INBOX_PATH} から自動作成 -->`,
   ].join("\n");
   // 取得できなかった場合の仮タイトルは、カテゴリ振り分け時にページタイトルを取得し直す
-  return { title: entry.title ?? (await fetchTitle(entry.url)) ?? titleFromUrl(entry.url), body };
+  const title = entry.title ?? (await fetchTitle(entry.url)) ?? titleFromUrl(entry.url);
+  return { title, body, labels: ["inbox", ...categoriesFromTags(parseIssue({ title, body }).tags)] };
 }
 
 const execFileAsync = promisify(execFile);
 
 // シェルを介さず引数配列で gh を呼ぶ（タイトルや本文は外部入力のため）
-export async function createIssueWithGh({ title, body }, { attempts = 2, timeoutMs = 30_000 } = {}) {
+export async function createIssueWithGh({ title, body, labels }, { attempts = 2, timeoutMs = 30_000 } = {}) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      const child = execFileAsync("gh", ["issue", "create", "--title", title, "--body-file", "-", "--label", "inbox"], {
+      const child = execFileAsync("gh", ["issue", "create", "--title", title, "--body-file", "-", "--label", labels.join(",")], {
         timeout: timeoutMs,
       });
       child.child.stdin.end(body);

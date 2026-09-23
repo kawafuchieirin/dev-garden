@@ -36,6 +36,12 @@ export function parseIssue({ title = "", body = "" }) {
   };
 }
 
+// #infra のようにカテゴリ名と同じタグは、振り分け先の候補を表す
+export function categoriesFromTags(tags) {
+  const lowered = tags.map((t) => t.toLowerCase());
+  return CATEGORIES.filter((c) => lowered.includes(c));
+}
+
 // ページタイトルを取得できないときの Issue タイトル。スキームを外してリンク扱いされないようにする
 export function titleFromUrl(url) {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -117,6 +123,23 @@ export async function fetchPageTitle(url, { timeoutMs = 10_000, fetchImpl = fetc
   }
 }
 
+// 振り分け先のカテゴリをイベントから決める
+//   - labeled：付けたラベルがカテゴリならそれ
+//   - unlabeled：inbox を外したとき、タグで付いた候補のカテゴリラベルがあればそれ（1つに限る）
+export function categoryFromEvent(event) {
+  if (event.action === "labeled") return { labelName: event.label?.name ?? "" };
+  if (event.action === "unlabeled" && event.label?.name === "inbox") {
+    const candidates = (event.issue.labels ?? []).map((l) => l.name).filter((n) => CATEGORIES.includes(n));
+    if (candidates.length > 1) {
+      return {
+        error: `カテゴリラベルが複数あります（${candidates.join(", ")}）。不要なラベルを外し、残したいカテゴリラベルを付け直してください。`,
+      };
+    }
+    return { labelName: candidates[0] ?? "" };
+  }
+  return { labelName: "" };
+}
+
 export async function run({ event, labelName, bookmarksDir = "bookmarks", fetchTitle = fetchPageTitle }) {
   if (!CATEGORIES.includes(labelName)) {
     return { status: "skipped", reason: `カテゴリラベルではありません: ${labelName}` };
@@ -134,14 +157,17 @@ export async function run({ event, labelName, bookmarksDir = "bookmarks", fetchT
   }
 
   const title = parsed.title ?? (await fetchTitle(parsed.url)) ?? parsed.url;
-  const entry = formatBookmark({ ...parsed, title, date: parsed.savedDate ?? toJstDate(issue.created_at) });
+  // 振り分けに使ったカテゴリ名のタグは、ファイル名と重複するのでブックマークには残さない
+  const tags = parsed.tags.filter((t) => !CATEGORIES.includes(t.toLowerCase()));
+  const entry = formatBookmark({ ...parsed, title, tags, date: parsed.savedDate ?? toJstDate(issue.created_at) });
   await appendFile(file, current.endsWith("\n") ? entry : `\n${entry}`);
   return { status: "added", file, url: parsed.url, entry };
 }
 
 async function main() {
   const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, "utf8"));
-  const result = await run({ event, labelName: event.label?.name ?? "" });
+  const { labelName, error } = categoryFromEvent(event);
+  const result = error ? { status: "error", reason: error } : await run({ event, labelName });
   console.log(JSON.stringify(result, null, 2));
 
   if (process.env.GITHUB_OUTPUT) {

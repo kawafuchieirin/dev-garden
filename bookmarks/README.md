@@ -20,6 +20,7 @@
 - 新しいURLは GitHub Issue（スマホ・Slack・PC）または `inbox.md`（PC）に入れる
   - `inbox.md` の項目は push 時に Issue へ自動変換されるため、未整理のURLはすべて Issue に集まる
 - 週1回、`inbox` ラベルの Issue にカテゴリラベルを付けて整理する（該当ファイルへ自動追記される）
+  - `#infra` のようにカテゴリ名のタグを付けて登録すると候補ラベルが付くので、確認して `inbox` ラベルを外すだけでよい
 - どのカテゴリにも当てはまらないものが増えてきたら、新しいカテゴリファイルを追加してこの表に追記する
   （Issue から自動追記したい場合は `scripts/bookmark-from-issue.mjs` の `CATEGORIES` とラベルも追加する）
 - タグで横断的に探す：`grep -rn "#docker" bookmarks/`
