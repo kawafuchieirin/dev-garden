@@ -78,11 +78,10 @@ cp templates/experiment.md experiments/2026-09-23-bun-vs-node-startup/README.md
 
 1. 新しいURLはまず inbox に入れる
    - スマホ・Slackから：GitHub Issue を作成する（`inbox` ラベルが自動付与される）
-   - PCから：`bookmarks/inbox.md` に直接追記する、または Issue を作成する
+   - PCから：Issue を作成する、または `bookmarks/inbox.md` に追記して push する（Actions が自動で Issue に変換する）
 2. 週1回、inbox を整理する（毎週月曜に「週次inbox整理」Issue が自動で作られる）
-   - Issue：カテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付けると、該当ファイルへ自動で追記されて Issue がクローズされる
-   - Issue：不要なものは「Close as not planned」で閉じる
-   - `inbox.md`：該当するカテゴリファイルへ手で移し、inbox からは削除する
+   - カテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付けると、該当ファイルへ自動で追記されて Issue がクローズされる
+   - 不要なものは「Close as not planned」で閉じる
 
 スマホ・Slackからの追加方法の比較と設定手順は [docs/url-collection.md](docs/url-collection.md) にまとめています。
 

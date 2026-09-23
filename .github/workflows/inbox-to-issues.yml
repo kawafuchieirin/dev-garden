@@ -1,0 +1,47 @@
+name: Inbox to issues
+
+# bookmarks/inbox.md に追記して main に push すると、各項目を inbox ラベル付きの Issue に変換し、
+# inbox.md からは取り除く。以降の振り分けは Issue 経由（bookmark-from-issue.yml）に一本化する。
+# GITHUB_TOKEN による push や Issue 作成は他のワークフローを起動しないため、ループは起きない。
+
+on:
+  push:
+    branches: [main]
+    paths: [bookmarks/inbox.md]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  # bookmark-from-issue.yml と同じグループにして、bookmarks/ への push を直列化する
+  group: bookmarks
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4
+
+      - id: convert
+        run: node scripts/inbox-to-issues.mjs
+
+      # 一部の Issue 作成に失敗しても、成功した分は inbox.md から取り除いて重複作成を防ぐ
+      - name: inbox.md の変更を push
+        if: ${{ !cancelled() && steps.convert.outputs.created > 0 }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bookmarks/inbox.md
+          git commit -m "chore: inbox.md の ${CREATED} 件を Issue に移動"
+          git pull --rebase
+          git push
+        env:
+          CREATED: ${{ steps.convert.outputs.created }}
