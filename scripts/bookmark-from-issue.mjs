@@ -11,7 +11,9 @@ const URL_PATTERN = /https?:\/\/[^\s<>|)\]"']+/;
 // 見出し（"# 見出し"）や URL のフラグメントを拾わないよう、空白直後の #xxx だけをタグとみなす
 const TAG_PATTERN = /(?:^|\s)#([\p{L}\p{N}_-]+)/gu;
 const COMMENT_LABEL = /^(?:コメント|comment)\s*[:：]\s*/i;
-const META_LINE = /^(?:url|タグ|tags?)\s*[:：]/i;
+const META_LINE = /^(?:url|タグ|tags?|保存日)\s*[:：]/i;
+// inbox.md から変換した Issue は、元の保存日を本文に持つ（Issue の作成日ではなくこちらを優先する）
+const SAVED_DATE = /^保存日\s*[:：]\s*(\d{4}-\d{2}-\d{2})\s*$/m;
 const FORM_SECTION = /^###\s+(.+)$/;
 const NO_RESPONSE = "_No response_";
 const SLACK_LINK = /<https?:\/\/[^>]*>/g;
@@ -29,6 +31,7 @@ export function parseIssue({ title = "", body = "" }) {
     title: titleIsUrlOnly ? null : title.trim(),
     comment: extractComment(body ?? ""),
     tags,
+    savedDate: (body ?? "").match(SAVED_DATE)?.[1] ?? null,
   };
 }
 
@@ -125,7 +128,7 @@ export async function run({ event, labelName, bookmarksDir = "bookmarks", fetchT
   }
 
   const title = parsed.title ?? (await fetchTitle(parsed.url)) ?? parsed.url;
-  const entry = formatBookmark({ ...parsed, title, date: toJstDate(issue.created_at) });
+  const entry = formatBookmark({ ...parsed, title, date: parsed.savedDate ?? toJstDate(issue.created_at) });
   await appendFile(file, current.endsWith("\n") ? entry : `\n${entry}`);
   return { status: "added", file, url: parsed.url, entry };
 }

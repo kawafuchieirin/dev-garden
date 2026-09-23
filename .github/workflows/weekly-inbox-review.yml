@@ -27,7 +27,8 @@ jobs:
           issues=$(gh issue list --label inbox --state open --limit 200 --json number,title \
             --jq '.[] | "- [ ] #\(.number) \(.title)"')
           issue_count=$(printf '%s' "$issues" | grep -c . || true)
-          file_count=$(grep -c '^- \[' bookmarks/inbox.md || true)
+          # inbox.md の項目は push 時に Issue へ変換されるため、残っているのは変換に失敗したもの
+          file_count=$(grep -cE '^([-*][[:space:]]+)?(\[.*\]\()?https?://' bookmarks/inbox.md || true)
 
           for n in $(gh issue list --label weekly-review --state open --json number --jq '.[].number'); do
             gh issue close "$n" --reason "not planned" --comment "次週の整理 Issue に引き継ぎました。"
@@ -47,7 +48,7 @@ jobs:
             echo "${issues:-なし}"
             echo
             echo "## bookmarks/inbox.md"
-            echo "該当するカテゴリファイルへ移し、inbox.md からは削除してください。"
+            echo "Issue への変換に失敗した項目です。Actions の「Inbox to issues」のログを確認し、手動実行で再試行してください。"
           } > body.md
 
           gh issue create --title "週次inbox整理 $(TZ=Asia/Tokyo date +%F)" --label weekly-review --body-file body.md

@@ -1,6 +1,7 @@
 # Inbox
 
-未整理のURLを一時的に置く場所です。週1回、カテゴリ別のファイルへ移して、ここからは削除します。
-スマホ・Slackからは GitHub Issue で追加します（[docs/url-collection.md](../docs/url-collection.md)）。
+PC からまとめて URL を貼る場所です。main に push すると、各項目が自動で `inbox` ラベル付きの Issue になり、ここからは削除されます。
+スマホ・Slackからは直接 Issue を作ります（[docs/url-collection.md](../docs/url-collection.md)）。
 
-<!-- この下に追記する。形式は templates/bookmark.md 参照 -->
+<!-- この下に追記する。形式は templates/bookmark.md と同じ（保存日・コメント行は省略可）。URL だけの行でもよい -->
+

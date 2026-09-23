@@ -20,12 +20,13 @@ A を土台にして、B は「inbox.md に追記」ではなく **「Issue を�
 - **入口がどこでも、行き先は Issue の1か所**になる。散らばる問題そのものを解決できる
 - ショートカットの処理が Issue 作成の1リクエストで済み、壊れにくい。トークンの権限も Issues に絞れる
 - 整理は「ラベルを付けるだけ」。このリポジトリでは GitHub Actions がカテゴリファイルへの追記とクローズを自動で行う
-- `bookmarks/inbox.md` は PC で作業中にまとめて貼る用途として残す
+- `bookmarks/inbox.md` は PC で作業中にまとめて貼る用途として残す。push すると Actions が Issue に変換するので、整理はすべて Issue で行える
 
 ```
 iPhone（Safari / X / YouTube の共有シート）── ショートカット ──┐
 Slack（メッセージのメニュー）──────── GitHub アプリ ─────────┼──▶ Issue（inbox ラベル）
-PC / GitHub モバイルアプリ ─────── Issue フォーム ───────────┘            │
+PC / GitHub モバイルアプリ ─────── Issue フォーム ───────────┤            │
+PC（bookmarks/inbox.md に追記して push）── Actions ────────────┘            │
                                                          カテゴリラベルを付ける（週1回）
                                                                           ▼
                                                   Actions が bookmarks/<category>.md に追記して Issue をクローズ
@@ -37,8 +38,10 @@ PC / GitHub モバイルアプリ ─────── Issue フォーム ─�
 | --- | --- |
 | `.github/ISSUE_TEMPLATE/bookmark.yml` | URL・一言コメント・タグを入力する Issue フォーム |
 | `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付ける。カテゴリラベルが付いたら該当ファイルへ追記してクローズする |
+| `.github/workflows/inbox-to-issues.yml` | `bookmarks/inbox.md` への push を検知し、各項目を `inbox` ラベル付き Issue に変換して inbox.md から取り除く |
 | `.github/workflows/weekly-inbox-review.yml` | 毎週月曜 9:00 に未整理の件数と一覧をまとめた「週次inbox整理」Issue を作る |
 | `scripts/bookmark-from-issue.mjs` | Issue 本文の解析と追記処理。タイトルが URL だけのときはページの `<title>` を取得して補う |
+| `scripts/inbox-to-issues.mjs` | `inbox.md` の項目を読み取り、Issue を作成する。作成に失敗した項目は inbox.md に残り、次の push で再試行される |
 | `scripts/setup-labels.sh` | 運用で使うラベル（inbox・カテゴリ・weekly-review・article・experiment）を作成する |
 
 Issue 本文は次のどの形式でも解析できます。
@@ -138,7 +141,8 @@ Slack モバイルアプリからも同じ操作で追加できます。
 1. プロジェクトボードを開くか、Issue 一覧を `label:inbox is:open` で絞り込む
 2. 残すものにカテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付ける → 数十秒で該当ファイルへ追記され、Issue がクローズされる
 3. 不要なものは **Close as not planned** で閉じる
-4. `bookmarks/inbox.md` に溜まった分は手でカテゴリファイルへ移す
+4. 「週次inbox整理」に `inbox.md` の残りが載っている場合は、Issue への変換に失敗しています
+   - Actions の「Inbox to issues」のログを確認し、手動実行（Run workflow）で再試行する
 
 GitHub モバイルアプリからもラベル付けできるので、移動中にも整理できます。
 
