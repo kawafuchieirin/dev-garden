@@ -85,6 +85,36 @@ cp templates/experiment.md experiments/2026-09-23-bun-vs-node-startup/README.md
 
 スマホ・Slackからの追加方法の比較と設定手順は [docs/url-collection.md](docs/url-collection.md) にまとめています。
 
+### ターミナルから1行で登録する（bm コマンド）
+
+`gh` で Issue を作れば、Web から作った場合と同じ流れで処理されます。`~/.zshrc` に次の関数を追加すると `bm` で登録できます。
+
+```zsh
+# tech-lab ブックマーク登録: bm <URL> [コメント #タグ] [カテゴリ]
+# カテゴリ省略時は inbox に入る。frontend/backend/infra/ai を指定すると即座にカテゴリファイルへ追記される
+bm() {
+  local url="$1" note="${2:-}" label="${3:-inbox}"
+  if [[ -z "$url" || "$url" != http*://* ]]; then
+    echo "使い方: bm <URL> [コメント #タグ] [inbox|frontend|backend|infra|ai]" >&2
+    return 1
+  fi
+  if [[ ! "$label" =~ ^(inbox|frontend|backend|infra|ai)$ ]]; then
+    echo "カテゴリは inbox / frontend / backend / infra / ai のいずれかを指定してください: $label" >&2
+    return 1
+  fi
+  gh issue create -R kawafuchieirin/dev-garden -t "$url" -b "コメント: $note" -l "$label"
+}
+```
+
+```sh
+bm https://example.com/a                                   # inbox に入れる（週次で仕分け）
+bm https://example.com/b "compose の watch が便利 #docker"   # コメント・タグ付き
+bm https://example.com/c "Terraform 入門" infra              # infra.md に直接追記
+```
+
+- 記事タイトルは自動で取得されるため、URL だけ渡せばよい
+- カテゴリを指定すると inbox を経由せず、数十秒後に `bookmarks/<カテゴリ>.md` へ追記されて Issue がクローズされる
+
 ### プロジェクトボード
 
 GitHub Projects の [tech-lab](https://github.com/users/kawafuchieirin/projects/4) で、ブックマーク・記事・検証の進み具合を1つのボードで管理します。
