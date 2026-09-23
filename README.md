@@ -102,7 +102,9 @@ bm() {
     echo "カテゴリは inbox / frontend / backend / infra / ai のいずれかを指定してください: $label" >&2
     return 1
   fi
-  gh issue create -R kawafuchieirin/dev-garden -t "$url" -b "コメント: $note" -l "$label"
+  # タイトルは Actions がページタイトルに置き換える（URL は本文に残る）
+  gh issue create -R kawafuchieirin/dev-garden -t "$url" -b "URL: $url
+コメント: $note" -l "$label"
 }
 ```
 
@@ -112,7 +114,7 @@ bm https://example.com/b "compose の watch が便利 #docker"   # コメント�
 bm https://example.com/c "Terraform 入門" infra              # infra.md に直接追記
 ```
 
-- 記事タイトルは自動で取得されるため、URL だけ渡せばよい
+- 記事タイトルは自動で取得されるため、URL だけ渡せばよい（Issue のタイトルも数十秒後にページタイトルへ置き換わり、URL は本文から開ける）
 - カテゴリを指定すると inbox を経由せず、数十秒後に `bookmarks/<カテゴリ>.md` へ追記されて Issue がクローズされる
 
 ### プロジェクトボード

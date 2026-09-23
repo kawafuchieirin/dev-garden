@@ -37,10 +37,11 @@ PC（bookmarks/inbox.md に追記して push）── Actions ──────
 | ファイル | 内容 |
 | --- | --- |
 | `.github/ISSUE_TEMPLATE/bookmark.yml` | URL・一言コメント・タグを入力する Issue フォーム |
-| `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付ける。カテゴリラベルが付いたら該当ファイルへ追記してクローズする |
+| `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付け、タイトルが URL なら本文へ移してページタイトルに置き換える。カテゴリラベルが付いたら該当ファイルへ追記してクローズする |
 | `.github/workflows/inbox-to-issues.yml` | `bookmarks/inbox.md` への push を検知し、各項目を `inbox` ラベル付き Issue に変換して inbox.md から取り除く |
 | `.github/workflows/weekly-inbox-review.yml` | 毎週月曜 9:00 に未整理の件数と一覧をまとめた「週次inbox整理」Issue を作る |
 | `scripts/bookmark-from-issue.mjs` | Issue 本文の解析と追記処理。タイトルが URL だけのときはページの `<title>` を取得して補う |
+| `scripts/normalize-issue.mjs` | タイトルが URL の Issue を、URL は本文・タイトルはページタイトルという形に直す（タイトルのリンクはクリックできないため） |
 | `scripts/inbox-to-issues.mjs` | `inbox.md` の項目を読み取り、Issue を作成する。作成に失敗した項目は inbox.md に残り、次の push で再試行される |
 | `scripts/setup-labels.sh` | 運用で使うラベル（inbox・カテゴリ・weekly-review・article・experiment）を作成する |
 

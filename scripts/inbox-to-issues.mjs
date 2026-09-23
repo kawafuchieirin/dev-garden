@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { readFile, appendFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { fetchPageTitle, titleFromUrl } from "./bookmark-from-issue.mjs";
 
 export const INBOX_PATH = "bookmarks/inbox.md";
 
@@ -48,7 +49,9 @@ export function removeEntries(lines, entries) {
   return lines.filter((_, i) => !removed.has(i)).join("\n");
 }
 
-export function buildIssue(entry) {
+// Issue タイトルのリンクはクリックできないため、URL は本文に置き、タイトルにはページタイトルを使う。
+// Actions が作る Issue は normalize-issue.mjs を起動しないので、ここでタイトルを取得する
+export async function buildIssue(entry, { fetchTitle = fetchPageTitle } = {}) {
   const body = [
     `URL: ${entry.url}`,
     `コメント: ${entry.note}`,
@@ -56,8 +59,8 @@ export function buildIssue(entry) {
     "",
     `<!-- ${INBOX_PATH} から自動作成 -->`,
   ].join("\n");
-  // タイトルが URL のままなら、カテゴリ振り分け時にページタイトルが取得される
-  return { title: entry.title ?? entry.url, body };
+  // 取得できなかった場合の仮タイトルは、カテゴリ振り分け時にページタイトルを取得し直す
+  return { title: entry.title ?? (await fetchTitle(entry.url)) ?? titleFromUrl(entry.url), body };
 }
 
 const execFileAsync = promisify(execFile);
@@ -82,14 +85,14 @@ export async function createIssueWithGh({ title, body }, { attempts = 2, timeout
 }
 
 // 作成に成功した項目だけを inbox.md から取り除く。失敗した項目は次回の push で再試行される
-export async function run({ content, createIssue = createIssueWithGh }) {
+export async function run({ content, createIssue = createIssueWithGh, fetchTitle = fetchPageTitle }) {
   const { lines, entries } = parseInbox(content);
   const created = [];
   const failed = [];
 
   for (const entry of entries) {
     try {
-      const url = await createIssue(buildIssue(entry));
+      const url = await createIssue(await buildIssue(entry, { fetchTitle }));
       created.push({ ...entry, issueUrl: url });
     } catch (error) {
       failed.push({ ...entry, error: error.message });

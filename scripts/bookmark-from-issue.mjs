@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 export const CATEGORIES = ["frontend", "backend", "infra", "ai"];
 
 // Slack 経由の本文は <https://...|表示名> 形式になるため、<>| で URL を打ち切る
-const URL_PATTERN = /https?:\/\/[^\s<>|)\]"']+/;
+export const URL_PATTERN = /https?:\/\/[^\s<>|)\]"']+/;
 // 見出し（"# 見出し"）や URL のフラグメントを拾わないよう、空白直後の #xxx だけをタグとみなす
 const TAG_PATTERN = /(?:^|\s)#([\p{L}\p{N}_-]+)/gu;
 const COMMENT_LABEL = /^(?:コメント|comment)\s*[:：]\s*/i;
@@ -24,7 +24,8 @@ export function parseIssue({ title = "", body = "" }) {
   if (!url) return null;
 
   const tags = [...new Set([...text.matchAll(TAG_PATTERN)].map((m) => m[1]))];
-  const titleIsUrlOnly = title.trim() === "" || URL_PATTERN.test(title);
+  // ページタイトルを取得できず URL から作った仮タイトルも、振り分け時に再取得させる
+  const titleIsUrlOnly = title.trim() === "" || URL_PATTERN.test(title) || title.trim() === titleFromUrl(url);
 
   return {
     url,
@@ -33,6 +34,11 @@ export function parseIssue({ title = "", body = "" }) {
     tags,
     savedDate: (body ?? "").match(SAVED_DATE)?.[1] ?? null,
   };
+}
+
+// ページタイトルを取得できないときの Issue タイトル。スキームを外してリンク扱いされないようにする
+export function titleFromUrl(url) {
+  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
 // 対応する本文の形式:
