@@ -86,6 +86,20 @@ cp templates/experiment.md experiments/2026-09-23-bun-vs-node-startup/README.md
 
 スマホ・Slackからの追加方法の比較と設定手順は [docs/url-collection.md](docs/url-collection.md) にまとめています。
 
+### プロジェクトボード
+
+GitHub Projects の [tech-lab](https://github.com/users/kawafuchieirin/projects/4) で、ブックマーク・記事・検証の進み具合を1つのボードで管理します。
+
+| フィールド | 値 | 使い方 |
+| --- | --- | --- |
+| Status | Todo / In Progress / Done | 未着手・作業中・完了 |
+| 種別 | ブックマーク / 記事 / 検証 | 何の作業かを区別する |
+
+- `inbox` ラベルの Issue は自動でボードに追加される（Auto-add ワークフロー）
+- 記事や検証に取りかかるときは Issue を作り、種別を「記事」「検証」にして Status で進み具合を管理する
+  - 作成時に `article` / `experiment` ラベルを付ける（ラベルなしの Issue には `inbox` が自動で付くため）
+- 設定手順は [docs/url-collection.md](docs/url-collection.md#5-プロジェクトボード) を参照
+
 ## 開発環境
 
 ランタイムは [mise](https://mise.jdx.dev/) で管理しています。
@@ -97,4 +111,4 @@ pnpm lint:text   # 記事の textlint チェック
 pnpm test        # scripts/ のテスト
 ```
 
-`articles/` 配下を変更した PR では、GitHub Actions で textlint が自動実行されます。
+PR と main への push では、GitHub Actions で textlint とテストが自動実行されます。

@@ -39,7 +39,7 @@ PC / GitHub モバイルアプリ ─────── Issue フォーム ─�
 | `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付ける。カテゴリラベルが付いたら該当ファイルへ追記してクローズする |
 | `.github/workflows/weekly-inbox-review.yml` | 毎週月曜 9:00 に未整理の件数と一覧をまとめた「週次inbox整理」Issue を作る |
 | `scripts/bookmark-from-issue.mjs` | Issue 本文の解析と追記処理。タイトルが URL だけのときはページの `<title>` を取得して補う |
-| `scripts/setup-labels.sh` | 運用で使うラベルを作成する |
+| `scripts/setup-labels.sh` | 運用で使うラベル（inbox・カテゴリ・weekly-review・article・experiment）を作成する |
 
 Issue 本文は次のどの形式でも解析できます。
 
@@ -135,9 +135,29 @@ Slack モバイルアプリからも同じ操作で追加できます。
 
 毎週月曜に「週次inbox整理」Issue が作られ、GitHub の通知で届きます。
 
-1. Issue 一覧を `label:inbox is:open` で絞り込む
+1. プロジェクトボードを開くか、Issue 一覧を `label:inbox is:open` で絞り込む
 2. 残すものにカテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付ける → 数十秒で該当ファイルへ追記され、Issue がクローズされる
 3. 不要なものは **Close as not planned** で閉じる
 4. `bookmarks/inbox.md` に溜まった分は手でカテゴリファイルへ移す
 
 GitHub モバイルアプリからもラベル付けできるので、移動中にも整理できます。
+
+### 5. プロジェクトボード
+
+プロジェクト [tech-lab](https://github.com/users/kawafuchieirin/projects/4) は作成済みで、リポジトリにリンクしています。
+フィールドは Status（Todo / In Progress / Done）と種別（ブックマーク / 記事 / 検証）です。
+次の2つは API で設定できないため、ブラウザで設定します。
+
+1. ボード表示：プロジェクトの「+ New view」→ **Board** を追加し、Group by を Status にする
+2. Issue の自動追加：右上の「…」→ **Workflows** → **Auto-add to project** を開く
+   - フィルタを `is:issue label:inbox` にして有効にする
+   - 同じ画面の **Item closed** が有効なら、クローズされた Issue は自動で Done になる
+
+作り直す場合は、次のコマンドで同じ構成を再現できます（`project` 権限が必要：`gh auth refresh -s project`）。
+
+```sh
+gh project create --owner <ユーザー名> --title tech-lab
+gh project link <番号> --owner <ユーザー名> --repo <ユーザー名>/tech-lab
+gh project field-create <番号> --owner <ユーザー名> --name "種別" \
+  --data-type SINGLE_SELECT --single-select-options "ブックマーク,記事,検証"
+```
