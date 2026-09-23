@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseIssue } from "./bookmark-from-issue.mjs";
-import { normalizeIssue } from "./normalize-issue.mjs";
+import { candidateLabels, normalizeIssue } from "./normalize-issue.mjs";
 
 const URL = "https://e.com/articles/a/";
 
@@ -42,5 +42,30 @@ describe("normalizeIssue", () => {
       { fetchTitle: async () => assert.fail("呼ばれてはいけない") },
     );
     assert.equal(result, null);
+  });
+});
+
+describe("candidateLabels", () => {
+  it("カテゴリ名のタグをラベル候補にする（大文字小文字は区別しない）", () => {
+    assert.deepEqual(candidateLabels({ title: "記事", body: `URL: ${URL}\nコメント: 良い #Infra #terraform` }), ["infra"]);
+  });
+
+  it("カテゴリ名のタグが複数あればすべて候補にする", () => {
+    assert.deepEqual(candidateLabels({ title: "記事", body: `${URL}\n#ai #backend` }), ["backend", "ai"]);
+  });
+
+  it("カテゴリ名以外のタグしか無ければ候補なし", () => {
+    assert.deepEqual(candidateLabels({ title: "記事", body: `${URL}\n#terraform` }), []);
+  });
+
+  it("作成時にカテゴリラベルが付いていれば候補を付けない", () => {
+    assert.deepEqual(
+      candidateLabels({ title: "記事", body: `${URL}\n#ai`, labels: [{ name: "inbox" }, { name: "infra" }] }),
+      [],
+    );
+  });
+
+  it("URL の無い Issue（記事・検証など）には付けない", () => {
+    assert.deepEqual(candidateLabels({ title: "記事を書く", body: "#ai について" }), []);
   });
 });

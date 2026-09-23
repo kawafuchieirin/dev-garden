@@ -2,12 +2,14 @@ name: Bookmark from issue
 
 # - Issue が作られたら inbox ラベルを付ける（Slack など、ラベルを指定できない経路向け）
 # - タイトルが URL の Issue は、URL を本文へ移してタイトルをページタイトルにする（タイトルのリンクはクリックできないため）
+# - 本文に #infra のようなカテゴリ名のタグがあれば、そのカテゴリラベルを候補として付ける（inbox は残す）
 # - カテゴリラベル（frontend/backend/infra/ai）が付いたら bookmarks/<category>.md へ追記して Issue を閉じる
+# - 候補ラベルが付いた Issue は、確認して inbox ラベルを外したら同様に追記して閉じる
 # Issue の本文は外部入力のため、${{ }} で run に埋め込まず、スクリプトがイベント JSON から読む
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened, labeled, unlabeled]
 
 permissions: {}
 
@@ -29,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NUMBER: ${{ github.event.issue.number }}
 
-  move-url-to-body:
+  prepare-issue:
     if: github.event.action == 'opened'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -44,8 +46,14 @@ jobs:
 
   add-bookmark:
     if: >-
-      github.event.action == 'labeled' &&
-      contains(fromJSON('["frontend","backend","infra","ai"]'), github.event.label.name)
+      (github.event.action == 'labeled' &&
+        contains(fromJSON('["frontend","backend","infra","ai"]'), github.event.label.name)) ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'inbox' &&
+        github.event.issue.state == 'open' &&
+        (contains(github.event.issue.labels.*.name, 'frontend') ||
+          contains(github.event.issue.labels.*.name, 'backend') ||
+          contains(github.event.issue.labels.*.name, 'infra') ||
+          contains(github.event.issue.labels.*.name, 'ai')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -96,6 +104,11 @@ jobs:
         run: |
           gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" \
             --body "ブックマークを追加できませんでした: $REASON"
+          # inbox を外して確定しようとした場合は、未整理の一覧から消えないよう inbox を戻す
+          if [ "$ACTION" = "unlabeled" ]; then
+            gh issue edit "$NUMBER" --repo "$GITHUB_REPOSITORY" --add-label inbox
+          fi
           exit 1
         env:
           REASON: ${{ steps.add.outputs.reason }}
+          ACTION: ${{ github.event.action }}

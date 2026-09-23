@@ -24,8 +24,10 @@ jobs:
       - name: 整理用 Issue を作成
         run: |
           set -euo pipefail
-          issues=$(gh issue list --label inbox --state open --limit 200 --json number,title \
-            --jq '.[] | "- [ ] #\(.number) \(.title)"')
+          # タグから付いた候補のカテゴリラベルがあれば一覧に表示する
+          issues=$(gh issue list --label inbox --state open --limit 200 --json number,title,labels \
+            --jq '.[] | ([.labels[].name | select(. == "frontend" or . == "backend" or . == "infra" or . == "ai")] | join(", ")) as $c
+              | "- [ ] #\(.number) \(.title)\(if $c == "" then "" else "（候補: \($c)）" end)"')
           issue_count=$(printf '%s' "$issues" | grep -c . || true)
           # inbox.md の項目は push 時に Issue へ変換されるため、残っているのは変換に失敗したもの
           file_count=$(grep -cE '^([-*][[:space:]]+)?(\[.*\]\()?https?://' bookmarks/inbox.md || true)
@@ -44,6 +46,7 @@ jobs:
             echo
             echo "## Issue"
             echo "カテゴリラベル（frontend / backend / infra / ai）を付けると自動でファイルへ追記されます。不要なものは Close as not planned で閉じてください。"
+            echo "「候補」はタグから付いたカテゴリラベルです。正しければ inbox ラベルを外すと追記されます（違えば候補のラベルを外し、正しいカテゴリラベルを付けてください）。"
             echo
             echo "${issues:-なし}"
             echo

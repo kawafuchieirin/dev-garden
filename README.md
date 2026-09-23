@@ -81,6 +81,7 @@ cp templates/experiment.md experiments/2026-09-23-bun-vs-node-startup/README.md
    - PCから：Issue を作成する、または `bookmarks/inbox.md` に追記して push する（Actions が自動で Issue に変換する）
 2. 週1回、inbox を整理する（毎週月曜に「週次inbox整理」Issue が自動で作られる）
    - カテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付けると、該当ファイルへ自動で追記されて Issue がクローズされる
+   - コメントに `#infra` のようなカテゴリ名のタグを書いておくと、そのラベルが候補として付く。正しければ `inbox` ラベルを外すだけで追記される（詳細は [docs/url-collection.md](docs/url-collection.md#タグでカテゴリの候補を付ける)）
    - 不要なものは「Close as not planned」で閉じる
 
 スマホ・Slackからの追加方法の比較と設定手順は [docs/url-collection.md](docs/url-collection.md) にまとめています。
@@ -111,6 +112,7 @@ bm() {
 ```sh
 bm https://example.com/a                                   # inbox に入れる（週次で仕分け）
 bm https://example.com/b "compose の watch が便利 #docker"   # コメント・タグ付き
+bm https://example.com/d "watch が便利 #infra #docker"        # infra を候補にして inbox に入れる
 bm https://example.com/c "Terraform 入門" infra              # infra.md に直接追記
 ```
 

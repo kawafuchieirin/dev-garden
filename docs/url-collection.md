@@ -37,11 +37,11 @@ PC（bookmarks/inbox.md に追記して push）── Actions ──────
 | ファイル | 内容 |
 | --- | --- |
 | `.github/ISSUE_TEMPLATE/bookmark.yml` | URL・一言コメント・タグを入力する Issue フォーム |
-| `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付け、タイトルが URL なら本文へ移してページタイトルに置き換える。カテゴリラベルが付いたら該当ファイルへ追記してクローズする |
+| `.github/workflows/bookmark-from-issue.yml` | ラベルなしで作られた Issue に `inbox` を付け、タイトルが URL なら本文へ移してページタイトルに置き換える。カテゴリ名のタグがあれば候補ラベルを付ける。カテゴリラベルが付いたとき、または候補ラベル付きで `inbox` を外したときに該当ファイルへ追記してクローズする |
 | `.github/workflows/inbox-to-issues.yml` | `bookmarks/inbox.md` への push を検知し、各項目を `inbox` ラベル付き Issue に変換して inbox.md から取り除く |
 | `.github/workflows/weekly-inbox-review.yml` | 毎週月曜 9:00 に未整理の件数と一覧をまとめた「週次inbox整理」Issue を作る |
 | `scripts/bookmark-from-issue.mjs` | Issue 本文の解析と追記処理。タイトルが URL だけのときはページの `<title>` を取得して補う |
-| `scripts/normalize-issue.mjs` | タイトルが URL の Issue を、URL は本文・タイトルはページタイトルという形に直す（タイトルのリンクはクリックできないため） |
+| `scripts/normalize-issue.mjs` | タイトルが URL の Issue を、URL は本文・タイトルはページタイトルという形に直す（タイトルのリンクはクリックできないため）。カテゴリ名のタグから候補ラベルを付ける |
 | `scripts/inbox-to-issues.mjs` | `inbox.md` の項目を読み取り、Issue を作成する。作成に失敗した項目は inbox.md に残り、次の push で再試行される |
 | `scripts/setup-labels.sh` | 運用で使うラベル（inbox・カテゴリ・weekly-review・article・experiment）を作成する |
 
@@ -52,6 +52,16 @@ Issue 本文は次のどの形式でも解析できます。
 - 自由記述（Slack のメッセージなど）：URL とタグ以外の最初の行をコメントとして扱う
 
 `#タグ` は本文中のどこに書いても拾います。
+
+### タグでカテゴリの候補を付ける
+
+`#frontend` / `#backend` / `#infra` / `#ai` のようにカテゴリ名のタグを書くと、Issue 作成時にそのカテゴリラベルが**候補**として付きます（`inbox` ラベルは残ります）。
+
+- 候補が正しければ、`inbox` ラベルを外すと該当ファイルへ追記されて Issue がクローズされる
+- 違っていれば、候補のラベルを外して正しいカテゴリラベルを付ける（付けた時点で追記される）
+- 候補が複数付いた場合は、1つに絞ってから `inbox` を外す（複数のまま外すと、エラーをコメントして `inbox` を戻す）
+- カテゴリ名のタグはファイル名と重複するため、ブックマークのタグには残さない
+- 作成時にカテゴリラベルを直接指定した場合（`bm` コマンドの第3引数など）は、候補は付けずにそのまま追記する
 
 ## 設定手順
 
@@ -141,6 +151,7 @@ Slack モバイルアプリからも同じ操作で追加できます。
 
 1. プロジェクトボードを開くか、Issue 一覧を `label:inbox is:open` で絞り込む
 2. 残すものにカテゴリラベル（`frontend` / `backend` / `infra` / `ai`）を付ける → 数十秒で該当ファイルへ追記され、Issue がクローズされる
+   - タグから候補ラベルが付いているもの（一覧に「候補」と表示）は、正しければ `inbox` ラベルを外すだけでよい
 3. 不要なものは **Close as not planned** で閉じる
 4. 「週次inbox整理」に `inbox.md` の残りが載っている場合は、Issue への変換に失敗しています
    - Actions の「Inbox to issues」のログを確認し、手動実行（Run workflow）で再試行する

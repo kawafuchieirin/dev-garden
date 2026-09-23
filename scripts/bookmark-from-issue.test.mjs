@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  categoryFromEvent,
   extractHtmlTitle,
   fetchPageTitle,
   formatBookmark,
@@ -205,6 +206,17 @@ describe("run", () => {
     assert.equal(result.status, "duplicate");
   });
 
+  it("カテゴリ名のタグはブックマークのタグに残さない", async () => {
+    const dir = await setup();
+    await run({
+      event: event("t", "URL: https://e.com\nコメント: 良い #Infra #terraform"),
+      labelName: "infra",
+      bookmarksDir: dir,
+      fetchTitle: noFetch,
+    });
+    assert.match(await readFile(join(dir, "infra.md"), "utf8"), /\n {2}- 良い #terraform\n$/);
+  });
+
   it("カテゴリ以外のラベルは無視する", async () => {
     const result = await run({ event: event("t", "https://e.com"), labelName: "inbox" });
     assert.equal(result.status, "skipped");
@@ -214,5 +226,38 @@ describe("run", () => {
     const dir = await setup();
     const result = await run({ event: event("メモ", "本文"), labelName: "infra", bookmarksDir: dir });
     assert.equal(result.status, "error");
+  });
+});
+
+describe("categoryFromEvent", () => {
+  const issue = (...names) => ({ labels: names.map((name) => ({ name })) });
+
+  it("カテゴリラベルを付けたらそのカテゴリ", () => {
+    assert.deepEqual(categoryFromEvent({ action: "labeled", label: { name: "ai" }, issue: issue("inbox", "ai") }), {
+      labelName: "ai",
+    });
+  });
+
+  it("inbox を外したら、候補のカテゴリラベルに振り分ける", () => {
+    assert.deepEqual(categoryFromEvent({ action: "unlabeled", label: { name: "inbox" }, issue: issue("infra") }), {
+      labelName: "infra",
+    });
+  });
+
+  it("inbox を外しても候補が無ければ何もしない", () => {
+    assert.deepEqual(categoryFromEvent({ action: "unlabeled", label: { name: "inbox" }, issue: issue() }), {
+      labelName: "",
+    });
+  });
+
+  it("候補が複数あればエラーにする", () => {
+    const result = categoryFromEvent({ action: "unlabeled", label: { name: "inbox" }, issue: issue("infra", "ai") });
+    assert.match(result.error, /infra, ai/);
+  });
+
+  it("inbox 以外のラベルを外しても何もしない", () => {
+    assert.deepEqual(categoryFromEvent({ action: "unlabeled", label: { name: "ai" }, issue: issue("inbox") }), {
+      labelName: "",
+    });
   });
 });

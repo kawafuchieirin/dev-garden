@@ -67,6 +67,12 @@ describe("buildIssue", () => {
     assert.equal(parseIssue(issue).comment, "");
   });
 
+  it("inbox ラベルに加え、カテゴリ名のタグをラベル候補にする", async () => {
+    const [plain, tagged] = parseInbox("- [a](https://e.com/a)\n  - #docker\n- [b](https://e.com/b)\n  - 良い #infra\n").entries;
+    assert.deepEqual((await buildIssue(plain)).labels, ["inbox"]);
+    assert.deepEqual((await buildIssue(tagged)).labels, ["inbox", "infra"]);
+  });
+
   it("ページタイトルを取得できなければ仮タイトルにし、振り分け時に再取得させる", async () => {
     const [entry] = parseInbox("- https://e.com/b\n").entries;
     const issue = await buildIssue(entry, { fetchTitle: async () => null });
