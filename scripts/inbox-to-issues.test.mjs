@@ -46,9 +46,9 @@ describe("parseInbox", () => {
 });
 
 describe("buildIssue", () => {
-  it("bookmark-from-issue の parseIssue で元の情報を復元できる", () => {
+  it("bookmark-from-issue の parseIssue で元の情報を復元できる", async () => {
     const [entry] = parseInbox("- [記事](https://e.com/a) - 2026-09-20\n  - 良い #docker #compose\n").entries;
-    const issue = buildIssue(entry);
+    const issue = await buildIssue(entry, { fetchTitle: async () => assert.fail("呼ばれてはいけない") });
     assert.deepEqual(parseIssue(issue), {
       url: "https://e.com/a",
       title: "記事",
@@ -58,12 +58,21 @@ describe("buildIssue", () => {
     });
   });
 
-  it("タイトルが無ければ URL をタイトルにする（振り分け時にページタイトルを取得させる）", () => {
+  it("タイトルが無ければページタイトルを取得し、URL は本文に置く", async () => {
     const [entry] = parseInbox("- https://e.com/b\n").entries;
-    const issue = buildIssue(entry);
-    assert.equal(issue.title, "https://e.com/b");
-    assert.equal(parseIssue(issue).title, null);
+    const issue = await buildIssue(entry, { fetchTitle: async () => "取得したタイトル" });
+    assert.equal(issue.title, "取得したタイトル");
+    assert.match(issue.body, /^URL: https:\/\/e\.com\/b$/m);
+    assert.equal(parseIssue(issue).title, "取得したタイトル");
     assert.equal(parseIssue(issue).comment, "");
+  });
+
+  it("ページタイトルを取得できなければ仮タイトルにし、振り分け時に再取得させる", async () => {
+    const [entry] = parseInbox("- https://e.com/b\n").entries;
+    const issue = await buildIssue(entry, { fetchTitle: async () => null });
+    assert.equal(issue.title, "e.com/b");
+    assert.equal(parseIssue(issue).title, null);
+    assert.equal(parseIssue(issue).url, "https://e.com/b");
   });
 });
 
@@ -73,12 +82,13 @@ describe("run", () => {
     const calls = [];
     const result = await run({
       content,
+      fetchTitle: async () => null,
       createIssue: async (issue) => {
         calls.push(issue.title);
         return `https://github.com/o/r/issues/${calls.length}`;
       },
     });
-    assert.deepEqual(calls, ["記事", "https://e.com/b"]);
+    assert.deepEqual(calls, ["記事", "e.com/b"]);
     assert.equal(result.content, HEADER);
     assert.equal(result.created.length, 2);
     assert.equal(result.failed.length, 0);
@@ -88,6 +98,7 @@ describe("run", () => {
     const content = `${HEADER}- https://e.com/ok\n- https://e.com/ng\n  - 残る\n`;
     const result = await run({
       content,
+      fetchTitle: async () => null,
       createIssue: async ({ title }) => {
         if (title.endsWith("/ng")) throw new Error("API error");
         return "https://github.com/o/r/issues/1";

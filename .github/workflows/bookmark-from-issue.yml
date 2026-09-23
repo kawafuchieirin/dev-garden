@@ -1,6 +1,7 @@
 name: Bookmark from issue
 
 # - Issue が作られたら inbox ラベルを付ける（Slack など、ラベルを指定できない経路向け）
+# - タイトルが URL の Issue は、URL を本文へ移してタイトルをページタイトルにする（タイトルのリンクはクリックできないため）
 # - カテゴリラベル（frontend/backend/infra/ai）が付いたら bookmarks/<category>.md へ追記して Issue を閉じる
 # Issue の本文は外部入力のため、${{ }} で run に埋め込まず、スクリプトがイベント JSON から読む
 
@@ -27,6 +28,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NUMBER: ${{ github.event.issue.number }}
+
+  move-url-to-body:
+    if: github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4
+      - run: node scripts/normalize-issue.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   add-bookmark:
     if: >-
